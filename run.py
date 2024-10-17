@@ -3,7 +3,7 @@ from vllm import LLM, SamplingParams
 
 
 # hyperparams refer to https://github.com/meta-llama/llama3/blob/main/llama/generation.py
-sampling_params = SamplingParams(temperature=0.6, top_p=0.9)
+sampling_params = SamplingParams(temperature=0.6, top_p=0.9, max_tokens=1024*4)
 SYSTEM_PROMPT = (
     "You are a medical language model designed to estimate the probability that a patient has "
     "Type II diabetes based on a specific medicine. You may use chain-of-thought reasoning, but "
