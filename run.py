@@ -93,4 +93,4 @@ if __name__ == "__main__":
         'prob': probas,
         'response': responses
     })
-    df.to_parquet("drug_diabetes_probas.parquet", engine='pyarrow')
+    result_df.to_parquet("drug_diabetes_probas.parquet", engine='pyarrow')
