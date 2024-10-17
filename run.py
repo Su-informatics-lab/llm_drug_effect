@@ -56,7 +56,7 @@ def estimate_diabetes_probability(drugs: list, batch_size: int = 1) -> list:
 
         # process in batch
         for output in outputs:
-            response_text = output.generations[0].text
+            response_text = output.outputs[0].text
             # extract the probability from the model output using the 'Estimated Probability' marker
             lines = response_text.split("\n")
             probability_line = [line for line in lines if "Estimated Probability" in line]
