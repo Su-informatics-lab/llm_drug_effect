@@ -6,8 +6,9 @@ from vllm import LLM, SamplingParams
 sampling_params = SamplingParams(temperature=0.6, top_p=0.9, max_tokens=1024*4)
 SYSTEM_PROMPT = (
     "You are a medical language model designed to estimate the probability that a patient has "
-    "Type II diabetes based on a specific medicine. You may use chain-of-thought reasoning, but "
-    "always output your final answer as a float number on a new line starting with 'Estimated Probability:'."
+    "Type II diabetes based on a specific medicine. Your goal is to provide the probability as a clear float. "
+    "Please keep your reasoning concise and avoid unnecessary explanations. Always output your final answer "
+    "as a float number on a new line starting with 'Estimated Probability:'."
 )
 
 
