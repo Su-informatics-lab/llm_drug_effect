@@ -80,7 +80,8 @@ if __name__ == "__main__":
 
     llm = LLM(model="meta-llama/Meta-Llama-3-8B-Instruct",
               tensor_parallel_size=2,
-              dtype='float16')
+              # dtype='float16'
+              )
     df = pd.read_parquet('drug_15355.parquet', engine='pyarrow')
     drugs = df['values'].tolist()[:100]
 
