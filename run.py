@@ -110,7 +110,7 @@ if __name__ == "__main__":
 
     llm = LLM(model=args.model,
               tensor_parallel_size=args.num_gpus,
-              dtype='bf16'
+              # dtype='bf16'
               )
 
     df = pd.read_parquet('drug_15355.parquet', engine='pyarrow')
