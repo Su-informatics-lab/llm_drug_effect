@@ -1,9 +1,8 @@
+import argparse
 import pandas as pd
 from vllm import LLM, SamplingParams
 
 
-# hyperparams refer to https://github.com/meta-llama/llama3/blob/main/llama/generation.py
-sampling_params = SamplingParams(temperature=0.6, top_p=0.9, max_tokens=1024*4)
 SYSTEM_PROMPT = (
     "You are a medical language model designed to estimate the probability that a patient has "
     "Type II diabetes based on a specific medicine. Your goal is to provide the probability as a clear float. "
@@ -12,7 +11,7 @@ SYSTEM_PROMPT = (
 )
 
 
-def create_conversation(drug):
+def create_conversation(drug, cot):
     # generate a conversation template that includes the drug name
     return [
         {
@@ -23,14 +22,20 @@ def create_conversation(drug):
             "role": "user",
             "content": (
                 f"Given that a patient took {drug}, estimate the probability that they have Type II diabetes. "
-                "You may reason step-by-step, but provide the final answer on a new line in the format: "
+                "You may think aloud and reason step-by-step."
+                "You should provide the final answer on a new line in the format: "
+                "'Estimated Probability: X', where X is the probability."
+            ) if cot else
+            (
+                f"Given that a patient took {drug}, estimate the probability that they have Type II diabetes. "
+                "You should provide the final answer on a new line in the format: "
                 "'Estimated Probability: X', where X is the probability."
             )
         }
     ]
 
 
-def estimate_diabetes_probability(drugs: list, batch_size: int = 1) -> list:
+def estimate_diabetes_probability(drugs: list, cot: bool, batch_size: int = 1) -> list:
     """
     Estimate the probability that a patient has Type II diabetes given that they took
     the specified medicines. Use chain-of-thought reasoning and provide the final result
@@ -38,6 +43,7 @@ def estimate_diabetes_probability(drugs: list, batch_size: int = 1) -> list:
 
     Args:
         drugs: List of the names of the medicines the patient took.
+        cot: Boolean indicating if chain-of-thought reasoning should be used.
         batch_size: The number of drugs to process in each batch.
 
     Returns:
@@ -49,7 +55,7 @@ def estimate_diabetes_probability(drugs: list, batch_size: int = 1) -> list:
 
     for i in range(0, len(drugs), batch_size):
         batch_drugs = drugs[i:i + batch_size]
-        conversations = [create_conversation(drug) for drug in batch_drugs]
+        conversations = [create_conversation(drug, cot) for drug in batch_drugs]
 
         outputs = llm.chat(
             messages=conversations,
@@ -63,14 +69,16 @@ def estimate_diabetes_probability(drugs: list, batch_size: int = 1) -> list:
             response_texts.append(response_text)
             # extract the probability from the model output using the 'Estimated Probability' marker
             lines = response_text.split("\n")
-            probability_line = [line for line in lines if "Estimated Probability" in line]
+            probability_line = [line for line in lines if
+                                "Estimated Probability" in line]
 
             if probability_line:
                 try:
                     # parse the float from the 'Estimated Probability' line
-                    estimated_probability = float(probability_line[0].split(":")[1].strip())
+                    estimated_probability = float(
+                        probability_line[0].split(":")[1].strip())
                 except (IndexError, ValueError):
-                    # Handle parsing errors
+                    # handle parsing errors
                     estimated_probability = None
             else:
                 estimated_probability = None
@@ -81,17 +89,38 @@ def estimate_diabetes_probability(drugs: list, batch_size: int = 1) -> list:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Run diabetes probability estimation with options.")
+    parser.add_argument('--model', type=str,
+                        default="meta-llama/Meta-Llama-3-8B-Instruct",
+                        help='Huggingface model name to use.')
+    parser.add_argument('--cot', type=bool, default=False,
+                        help='Whether to use chain-of-thought reasoning.')
+    parser.add_argument('--num_gpus', type=int, default=1,
+                        help='Number of GPUs to use.')
+    parser.add_argument('--temperature', type=float, default=0.6,
+                        help='Temperature parameter for sampling.')
+    parser.add_argument('--batch_size', type=int, default=4,
+                        help='Batch size for estimation.')
 
-    llm = LLM(model="meta-llama/Meta-Llama-3-8B-Instruct",
-              tensor_parallel_size=2,
-              # dtype='float16'
+    args = parser.parse_args()
+    # hyperparams refer to https://github.com/meta-llama/llama3/blob/main/llama/generation.py
+    sampling_params = SamplingParams(temperature=args.temperature, top_p=0.9,
+                                     max_tokens=1024 * 4)
+
+    llm = LLM(model=args.model,
+              tensor_parallel_size=args.num_gpus,
+              dtype='bf16'
               )
+
     df = pd.read_parquet('drug_15355.parquet', engine='pyarrow')
     drugs = df['values'].tolist()[:100]
 
-    probas, responses = estimate_diabetes_probability(drugs, 4)
+    probas, responses = estimate_diabetes_probability(drugs, cot=args.cot,
+                                                      batch_size=args.batch_size)
     result_df = pd.DataFrame({
         'prob': probas,
         'response': responses
     })
-    result_df.to_parquet("drug_diabetes_probas.parquet", engine='pyarrow')
+    save_path = "drug_diabetes_probas.parquet" if not args.cot else "drug_diabetes_probas_cot.parquet"
+    result_df.to_parquet(save_path, engine='pyarrow')
