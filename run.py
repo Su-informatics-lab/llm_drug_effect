@@ -94,8 +94,8 @@ if __name__ == "__main__":
     parser.add_argument('--model', type=str,
                         default="meta-llama/Meta-Llama-3-8B-Instruct",
                         help='Huggingface model name to use.')
-    parser.add_argument('--cot', type=bool, default=False,
-                        help='Whether to use chain-of-thought reasoning.')
+    parser.add_argument('--cot', action='store_true',
+                        help='Enable chain-of-thought reasoning.')
     parser.add_argument('--num_gpus', type=int, default=1,
                         help='Number of GPUs to use.')
     parser.add_argument('--temperature', type=float, default=0.6,
