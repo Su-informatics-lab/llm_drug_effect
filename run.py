@@ -122,5 +122,5 @@ if __name__ == "__main__":
         'prob': probas,
         'response': responses
     })
-    save_path = "drug_diabetes_probas.parquet" if not args.cot else "drug_diabetes_probas_cot.parquet"
+    save_path = "drug_t2d_15980_probas.parquet" if not args.cot else "drug_t2d_15980_probas_cot.parquet"
     result_df.to_parquet(save_path, engine='pyarrow')
