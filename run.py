@@ -114,7 +114,7 @@ if __name__ == "__main__":
               )
 
     df = pd.read_parquet('drugs_15980.parquet', engine='pyarrow')
-    drugs = df['values'].tolist()
+    drugs = df['standard_concept_name'].tolist()
 
     probas, responses = estimate_diabetes_probability(drugs, cot=args.cot,
                                                       batch_size=args.batch_size)
